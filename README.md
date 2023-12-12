@@ -1,2 +1,4 @@
 # python_learning
-Python projects 
+Repo for my personal python projects
+
+## Work in Progress ##
