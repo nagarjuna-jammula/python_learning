@@ -1,0 +1,43 @@
+import json
+import boto3
+sns = boto3.client('sns')
+
+def lambda_handler(event, context):
+    #Extract Values from the Json input
+    health_event = event.get('detail', {})
+    detail_type = event['detail-type']
+    account = health_event.get('affectedAccount','')
+    Region = event['region']
+    EventType = event['detail']['eventTypeCode']
+    EventScope = event['detail']['eventScopeCode']
+    EventCategory = event['detail']['eventTypeCategory']
+    ImpactedService = event['detail']['service']
+    lastUpdatedTime = event['detail']['lastUpdatedTime']
+    startTime = event['detail']['startTime']
+    statusCode = event['detail']['statusCode']
+    
+    #Getting the list of Affected resources
+    AffectedResources = [AR.get('entityValue') for AR in health_event.get('affectedEntities',[])]
+    formatted_resources = '\n'.join(map(str, AffectedResources))
+    
+    #
+    LatestDescription = event['detail']['eventDescription'][0]['latestDescription']
+    formatted_description = LatestDescription.replace('\\n', '\n').replace('\\t', '\t')
+    
+    #custom message
+    custom_message = "Detail Type: %s \n Account: %s \n Region: %s \n EventType: %s \n EventScope: %s \n EventCategory: %s \n Status Code: %s \n\n ImpactedService: %s \n\n Description: \n%s \n\nAffected Resources: \n %s \n\  Start Time: %s \n\n lastUpdatedTime: %s \n " %(detail_type, account, Region, EventType, EventScope, EventCategory, statusCode, ImpactedService, formatted_description, formatted_resources, startTime, lastUpdatedTime)
+    
+    #SNS ARN for Health Event Topic
+    SNS_ARN = '<sns-arn>'
+    
+    #Extracting Subject from the Event
+    SNS_Subject = "%s  [Account: %s ]" %(EventType, account )
+    
+    #Send the formatted output to SNS
+    
+    response = sns.publish(TopicArn = SNS_ARN, Message = custom_message, Subject = SNS_Subject )
+        
+    return {
+        'statusCode': 200,
+        'body': json.dumps(response)
+    }
